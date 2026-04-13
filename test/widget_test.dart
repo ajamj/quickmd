@@ -1,30 +1,43 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:quickmd/main.dart';
+import 'package:quickmd/core/utils/file_utils.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('FileUtils', () {
+    test('should extract path from file:// URI', () {
+      const uri = 'file:///storage/emulated/0/Documents/test.md';
+      final result = FileUtils.extractPathFromUri(uri);
+      expect(result, anyOf([
+        '/storage/emulated/0/Documents/test.md',
+        '\\storage\\emulated\\0\\Documents\\test.md',
+      ]));
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('should return content:// URI as-is', () {
+      const uri = 'content://com.android.externalfile.documents/document/1234';
+      final result = FileUtils.extractPathFromUri(uri);
+      expect(result, uri);
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('should return null for invalid URI', () {
+      const uri = 'invalid://test.md';
+      final result = FileUtils.extractPathFromUri(uri);
+      expect(result, isNull);
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('should identify markdown files', () {
+      expect(FileUtils.isMarkdownFile('test.md'), isTrue);
+      expect(FileUtils.isMarkdownFile('test.markdown'), isTrue);
+      expect(FileUtils.isMarkdownFile('test.txt'), isFalse);
+    });
+
+    test('should identify text files', () {
+      expect(FileUtils.isTextFile('test.txt'), isTrue);
+      expect(FileUtils.isTextFile('test.md'), isFalse);
+    });
+
+    test('should extract file name from path', () {
+      expect(FileUtils.getFileName('/path/to/test.md'), 'test.md');
+      expect(FileUtils.getFileName('test.txt'), 'test.txt');
+    });
   });
 }

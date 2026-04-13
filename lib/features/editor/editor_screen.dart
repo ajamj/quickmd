@@ -3,8 +3,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../core/di/providers.dart';
-import '../../data/repositories/file_repository.dart';
-import 'notifier/editor_notifier.dart';
+import 'notifier/editor_notifier.dart' as editor_notifier;
 
 /// Enhanced editor screen with WYSIWYG, Source, and Preview modes
 class EditorScreen extends ConsumerStatefulWidget {
@@ -16,52 +15,9 @@ class EditorScreen extends ConsumerStatefulWidget {
 
 class _EditorScreenState extends ConsumerState<EditorScreen> {
   @override
-  void initState() {
-    super.initState();
-    _loadFileFromIntent();
-  }
-
-  Future<void> _loadFileFromIntent() async {
-    // In a real implementation, this would handle the initial intent
-    // from File Manager to get the file path
-    // For now, we'll start with an empty document
-    
-    final notifier = ref.read(editorProvider.notifier);
-    // Uncomment when intent handling is implemented:
-    // if (filePath != null) {
-    //   await notifier.loadFile(filePath);
-    // }
-  }
-
-  Future<void> _saveFile() async {
-    try {
-      final notifier = ref.read(editorProvider.notifier);
-      await notifier.saveFile();
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('File saved successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save file: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final editorState = ref.watch(editorProvider);
-    final notifier = ref.read(editorProvider.notifier);
+    final editorState = ref.watch(editor_notifier.editorProvider);
+    final notifier = ref.read(editor_notifier.editorProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(
@@ -82,20 +38,20 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         ),
         actions: [
           // Mode toggle
-          SegmentedButton<EditorMode>(
+          SegmentedButton<editor_notifier.EditorMode>(
             segments: const [
               ButtonSegment(
-                value: EditorMode.wysiwyg,
+                value: editor_notifier.EditorMode.wysiwyg,
                 label: Text('WYSIWYG'),
                 icon: Icon(Icons.edit),
               ),
               ButtonSegment(
-                value: EditorMode.source,
+                value: editor_notifier.EditorMode.source,
                 label: Text('Source'),
                 icon: Icon(Icons.code),
               ),
               ButtonSegment(
-                value: EditorMode.preview,
+                value: editor_notifier.EditorMode.preview,
                 label: Text('Preview'),
                 icon: Icon(Icons.visibility),
               ),
@@ -110,7 +66,28 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
           if (editorState.isDirty)
             IconButton(
               icon: const Icon(Icons.save),
-              onPressed: _saveFile,
+              onPressed: () async {
+                try {
+                  await notifier.saveFile();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('File saved successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to save file: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
               tooltip: 'Save',
             ),
         ],
@@ -119,51 +96,52 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     );
   }
 
-  Widget _buildEditorBody(EditorState state, EditorNotifier notifier) {
+  Widget _buildEditorBody(
+    editor_notifier.EditorState state,
+    editor_notifier.EditorNotifier notifier,
+  ) {
     switch (state.mode) {
-      case EditorMode.wysiwyg:
+      case editor_notifier.EditorMode.wysiwyg:
         return _buildWYSIWYGEditor(state, notifier);
-      case EditorMode.source:
+      case editor_notifier.EditorMode.source:
         return _buildSourceEditor(state, notifier);
-      case EditorMode.preview:
+      case editor_notifier.EditorMode.preview:
         return _buildPreviewer(state);
     }
   }
 
-  Widget _buildWYSIWYGEditor(EditorState state, EditorNotifier notifier) {
+  Widget _buildWYSIWYGEditor(
+    editor_notifier.EditorState state,
+    editor_notifier.EditorNotifier notifier,
+  ) {
     return Column(
       children: [
         // Quill toolbar
-        QuillToolbar.simple(
-          configurations: QuillToolbarSimpleConfigurations(
-            controller: state.quillController!,
-            toolbarIconAlignment: WrapAlignment.start,
-            toolbarSectionSpacing: 8,
-          ),
+        QuillSimpleToolbar(
+          controller: state.quillController!,
+          config: const QuillSimpleToolbarConfig(),
         ),
         const Divider(height: 1),
-        
         // Quill editor
         Expanded(
           child: QuillEditor.basic(
-            configurations: QuillEditorConfigurations(
-              controller: state.quillController!,
+            controller: state.quillController!,
+            config: QuillEditorConfig(
               padding: const EdgeInsets.all(16),
               scrollable: true,
               autoFocus: true,
               expands: true,
-              readOnly: false,
             ),
-            onChanged: (_) {
-              notifier.markAsDirty();
-            },
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSourceEditor(EditorState state, EditorNotifier notifier) {
+  Widget _buildSourceEditor(
+    editor_notifier.EditorState state,
+    editor_notifier.EditorNotifier notifier,
+  ) {
     return TextField(
       controller: state.sourceController,
       maxLines: null,
@@ -184,9 +162,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     );
   }
 
-  Widget _buildPreviewer(EditorState state) {
+  Widget _buildPreviewer(editor_notifier.EditorState state) {
     final markdownContent = state.markdownContent;
-    
+
     return Markdown(
       data: markdownContent,
       padding: const EdgeInsets.all(16),
@@ -195,21 +173,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         h1: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
         h2: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
         h3: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        code: const TextStyle(
+        code: TextStyle(
           fontFamily: 'monospace',
-          backgroundColor: Colors.grey[200],
+          backgroundColor: Colors.grey.shade200,
         ),
         codeblockDecoration: BoxDecoration(
-          color: Colors.grey[200],
+          color: Colors.grey.shade200,
           borderRadius: BorderRadius.circular(8),
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    // Cleanup is handled by the notifier
-    super.dispose();
   }
 }
