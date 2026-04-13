@@ -1,0 +1,40 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code
+.vscode/
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+
+# Android
+*.jks
+*.keystore
+**/android/**/.gradle/
+**/android/**/.idea/
+**/android/**/build/
+**/android/**/local.properties
+
+# OS
+Thumbs.db
+
+# Pub
+pubspec.lock
