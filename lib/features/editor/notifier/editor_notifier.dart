@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:markdown/markdown.dart' as md;
-import '../../core/di/providers.dart';
-import '../../data/repositories/file_repository.dart';
+import 'package:dart_quill_delta/dart_quill_delta.dart';
+import '../../../core/di/providers.dart';
+import '../../../data/repositories/file_repository.dart';
 
 /// Editor mode enum
 enum EditorMode {
@@ -64,6 +64,13 @@ class EditorNotifier extends Notifier<EditorState> {
 
   @override
   EditorState build() {
+    // Register cleanup
+    ref.onDispose(() {
+      _autoSaveTimer?.cancel();
+      state.quillController?.dispose();
+      state.sourceController?.dispose();
+    });
+    
     return EditorState(
       quillController: QuillController.basic(),
       sourceController: TextEditingController(),
@@ -240,13 +247,5 @@ class EditorNotifier extends Notifier<EditorState> {
     }
     
     return buffer.toString();
-  }
-
-  @override
-  void dispose() {
-    _autoSaveTimer?.cancel();
-    state.quillController?.dispose();
-    state.sourceController?.dispose();
-    super.dispose();
   }
 }
